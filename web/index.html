@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calculadora Criptografica</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --text: #1d2330;
+    --muted: #5d6677;
+    --border: #d8dce3;
+    --input: #ffffff;
+    --accent: #2f5bd3;
+    --accent-text: #ffffff;
+    --accent-soft: #e6ecfb;
+    --ok: #1d7a46;
+    --ok-soft: #e3f4ea;
+    --bad: #b42318;
+    --bad-soft: #fde8e6;
+    --radius: 10px;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12151b; --card: #1b1f27; --text: #e6e9ef; --muted: #9aa3b2; --border: #2d3340;
+      --input: #12151b; --accent: #6d8ff0; --accent-text: #0d1220; --accent-soft: #232c45;
+      --ok: #5fcf8c; --ok-soft: #173126; --bad: #f2877c; --bad-soft: #3a1d1b;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12151b; --card: #1b1f27; --text: #e6e9ef; --muted: #9aa3b2; --border: #2d3340;
+    --input: #12151b; --accent: #6d8ff0; --accent-text: #0d1220; --accent-soft: #232c45;
+    --ok: #5fcf8c; --ok-soft: #173126; --bad: #f2877c; --bad-soft: #3a1d1b;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .contenedor { max-width: 1080px; margin: 0 auto; padding-block: 20px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  h1 { font-size: 1.35rem; margin: 0; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--muted); font-size: .9rem; }
+
+  /* Pestanas */
+  .pestanas { display: flex; gap: 4px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; margin-bottom: 16px; }
+  .pestanas button {
+    flex: 1; border: 0; background: transparent; color: var(--muted); font: inherit; font-weight: 600;
+    padding: 9px 8px; border-radius: 7px; cursor: pointer; white-space: nowrap;
+  }
+  .pestanas button[aria-selected="true"] { background: var(--accent); color: var(--accent-text); }
+  .pestanas button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .panel[hidden] { display: none; }
+
+  .tarjeta { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; min-width: 0; }
+  .tarjeta h2 { font-size: 1rem; margin: 0; }
+  .cabecera { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .fila { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .rejilla-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  @media (max-width: 360px) { .rejilla-2 { grid-template-columns: 1fr; } }
+  .apilado > * + * { margin-top: 14px; }
+
+  label { font-size: .85rem; color: var(--muted); font-weight: 600; display: block; margin-bottom: 4px; }
+  input {
+    font: 16px var(--mono); color: var(--text); background: var(--input);
+    border: 1px solid var(--border); border-radius: 7px; padding: 8px 10px; width: 100%; min-width: 0;
+  }
+  input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
+  input[readonly] { background: var(--bg); }
+  input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+  input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input.error { border-color: var(--bad); background: var(--bad-soft); }
+
+  button.btn {
+    font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--border); background: var(--card); color: var(--text);
+    border-radius: 7px; padding: 8px 12px; white-space: nowrap;
+  }
+  button.btn:hover { border-color: var(--accent); }
+  button.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button.primario { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  button.chico { padding: 5px 10px; font-size: .82rem; }
+
+  /* Barra k y n */
+  .barra { display: flex; gap: 18px; align-items: flex-end; flex-wrap: wrap; }
+  .barra .grupo { min-width: 0; }
+  .paso { display: flex; align-items: stretch; }
+  .paso input { width: 64px; text-align: center; border-radius: 0; border-left: 0; border-right: 0; }
+  .paso button { border-radius: 0; padding: 0 12px; font-size: 1.1rem; }
+  .paso button:first-child { border-radius: 7px 0 0 7px; }
+  .paso button:last-child { border-radius: 0 7px 7px 0; }
+  #n { width: 96px; }
+  .ayuda { color: var(--muted); font-size: .82rem; margin: 0; flex: 1 1 260px; }
+
+  /* Cuadricula de la matriz */
+  .celdas { display: grid; gap: 6px; margin-top: 10px; }
+  .celdas input { text-align: center; padding: 10px 2px; }
+
+  .operaciones { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .aviso { margin: 10px 0 0; color: var(--bad); font-size: .9rem; min-height: 0; }
+  .aviso:empty { display: none; }
+
+  /* Resultado */
+  .resultado { overflow-x: auto; }
+  .resultado .vacio { color: var(--muted); margin: 0; }
+  .bloque { margin-bottom: 14px; }
+  .bloque:last-child { margin-bottom: 0; }
+  .bloque .titulo { font-family: var(--mono); font-size: .9rem; margin-bottom: 6px; }
+  .mat {
+    display: inline-grid; gap: 4px 18px; padding: 6px 12px; font-family: var(--mono); font-size: 1rem;
+    border-left: 2px solid var(--text); border-right: 2px solid var(--text); border-radius: 6px; text-align: right;
+  }
+  .linea { font-family: var(--mono); font-size: .95rem; margin: 2px 0; overflow-wrap: anywhere; }
+  .etiqueta-estado { display: inline-block; font-weight: 700; font-size: .85rem; padding: 4px 10px; border-radius: 999px; margin-top: 8px; }
+  .si { color: var(--ok); background: var(--ok-soft); }
+  .no { color: var(--bad); background: var(--bad-soft); }
+
+  pre.pasos {
+    margin: 0; font: .9rem/1.5 var(--mono); background: var(--bg); border: 1px solid var(--border);
+    border-radius: 7px; padding: 10px 12px; overflow-x: auto; white-space: pre; min-height: 3.2em;
+  }
+  .campo + .campo { margin-top: 10px; }
+  .con-boton { display: flex; gap: 6px; }
+  .con-boton input { flex: 1; }
+  #bits { width: 84px; }
+</style>
+</head>
+<body>
+<div class="contenedor">
+  <header>
+    <h1>Calculadora Criptografica</h1>
+    <p>Matrices mod n, binario/decimal y XOR</p>
+  </header>
+
+  <nav class="pestanas" role="tablist" aria-label="Herramientas">
+    <button role="tab" aria-selected="true" aria-controls="p-matrices" id="t-matrices" title="Alt+1">Matrices</button>
+    <button role="tab" aria-selected="false" aria-controls="p-binario" id="t-binario" title="Alt+2">Binario / Decimal</button>
+    <button role="tab" aria-selected="false" aria-controls="p-xor" id="t-xor" title="Alt+3">XOR</button>
+  </nav>
+
+  <!-- ============================ MATRICES ============================ -->
+  <section class="panel apilado" id="p-matrices" role="tabpanel" aria-labelledby="t-matrices">
+    <div class="tarjeta barra">
+      <div class="grupo">
+        <label for="k">Tamano k</label>
+        <div class="paso">
+          <button class="btn" type="button" id="k-menos" aria-label="Reducir k">-</button>
+          <input id="k" type="number" min="1" max="10" value="3" inputmode="numeric">
+          <button class="btn" type="button" id="k-mas" aria-label="Aumentar k">+</button>
+        </div>
+      </div>
+      <div class="grupo">
+        <label for="n">Modulo n</label>
+        <input id="n" type="number" min="2" value="27" inputmode="numeric">
+      </div>
+      <p class="ayuda">Enter avanza a la siguiente celda; las flechas mueven entre celdas. Puedes pegar o escribir todos los valores en "Entrada rapida" (ej. <code>1 2 3; 4 5 6; 7 8 9</code>) y k se ajusta solo. Las celdas vacias valen 0.</p>
+    </div>
+
+    <div class="rejilla-2">
+      <div class="tarjeta" data-matriz="A"></div>
+      <div class="tarjeta" data-matriz="B"></div>
+    </div>
+
+    <div class="tarjeta">
+      <div class="operaciones">
+        <button class="btn" data-op="prod">A x B</button>
+        <button class="btn primario" data-op="prodmod">A x B mod n</button>
+        <button class="btn primario" data-op="detA">det(A) y gcd</button>
+        <button class="btn" data-op="detB">det(B) y gcd</button>
+        <button class="btn" data-op="invA">A^-1 mod n</button>
+        <button class="btn" data-op="invB">B^-1 mod n</button>
+        <button class="btn" data-op="resA">Resultado a A</button>
+        <button class="btn" data-op="swap">Intercambiar A y B</button>
+      </div>
+      <p class="aviso" id="aviso-mat" role="alert"></p>
+    </div>
+
+    <div class="tarjeta">
+      <div class="cabecera">
+        <h2>Resultado</h2>
+        <button class="btn chico" type="button" id="copiar-mat">Copiar como texto</button>
+      </div>
+      <div class="resultado" id="resultado-mat"><p class="vacio">Captura las matrices y elige una operacion.</p></div>
+    </div>
+  </section>
+
+  <!-- ========================= BINARIO / DECIMAL ========================= -->
+  <section class="panel" id="p-binario" role="tabpanel" aria-labelledby="t-binario" hidden>
+    <div class="rejilla-2">
+      <div class="tarjeta">
+        <div class="cabecera"><h2>Decimal a binario</h2></div>
+        <div class="campo fila" style="align-items:flex-end">
+          <div style="flex:1;min-width:0">
+            <label for="dec-in">Decimal</label>
+            <input id="dec-in" inputmode="numeric" autocomplete="off" placeholder="ej. 172">
+          </div>
+          <div>
+            <label for="bits" title="0 = sin relleno">Bits (relleno)</label>
+            <input id="bits" type="number" min="0" max="4096" value="0" inputmode="numeric">
+          </div>
+        </div>
+        <div class="campo">
+          <label for="bin-out">Binario</label>
+          <div class="con-boton"><input id="bin-out" readonly><button class="btn" data-copiar="bin-out">Copiar</button></div>
+        </div>
+        <div class="campo">
+          <label>Procedimiento</label>
+          <pre class="pasos" id="dec-pasos"></pre>
+        </div>
+      </div>
+
+      <div class="tarjeta">
+        <div class="cabecera"><h2>Binario a decimal</h2></div>
+        <div class="campo">
+          <label for="bin-in">Binario</label>
+          <input id="bin-in" inputmode="numeric" autocomplete="off" placeholder="ej. 1010 1100 (se permiten espacios)">
+        </div>
+        <div class="campo">
+          <label for="dec-out">Decimal</label>
+          <div class="con-boton"><input id="dec-out" readonly><button class="btn" data-copiar="dec-out">Copiar</button></div>
+        </div>
+        <div class="campo">
+          <label>Procedimiento</label>
+          <pre class="pasos" id="bin-pasos"></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================ XOR ================================ -->
+  <section class="panel" id="p-xor" role="tabpanel" aria-labelledby="t-xor" hidden>
+    <div class="tarjeta">
+      <div class="cabecera">
+        <h2>XOR de binarios</h2>
+        <div class="fila">
+          <button class="btn chico" id="xor-res-a">Resultado a A</button>
+          <button class="btn chico" id="xor-swap">Intercambiar</button>
+          <button class="btn chico" id="xor-limpiar">Limpiar</button>
+        </div>
+      </div>
+      <div class="rejilla-2">
+        <div><label for="xor-a">A</label><input id="xor-a" inputmode="numeric" autocomplete="off" placeholder="ej. 1010 1100"></div>
+        <div><label for="xor-b">B</label><input id="xor-b" inputmode="numeric" autocomplete="off" placeholder="ej. 0011 0101"></div>
+      </div>
+      <div class="campo" style="margin-top:12px">
+        <label for="xor-out">A XOR B</label>
+        <div class="con-boton"><input id="xor-out" readonly><button class="btn" data-copiar="xor-out">Copiar</button></div>
+      </div>
+      <div class="campo">
+        <label>Detalle</label>
+        <pre class="pasos" id="xor-detalle"></pre>
+      </div>
+      <p class="ayuda" style="margin-top:8px">Bits iguales dan 0 y bits distintos dan 1. La cadena mas corta se rellena con ceros a la izquierda. Usa "Resultado a A" para encadenar varios XOR.</p>
+    </div>
+  </section>
+</div>
+
+<script src="cripto.js"></script>
+<script>
+(function () {
+  'use strict';
+  const C = window.Cripto;
+  const $ = id => document.getElementById(id);
+
+  // ---------------------------- Pestanas ----------------------------
+  const tabs = [...document.querySelectorAll('[role="tab"]')];
+  function activar(tab) {
+    tabs.forEach(t => {
+      const sel = t === tab;
+      t.setAttribute('aria-selected', sel);
+      t.tabIndex = sel ? 0 : -1;
+      $(t.getAttribute('aria-controls')).hidden = !sel;
+    });
+    try { localStorage.setItem('cripto-tab', tab.id); } catch (e) { /* sin almacenamiento */ }
+  }
+  tabs.forEach((t, i) => {
+    t.addEventListener('click', () => activar(t));
+    t.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        const sig = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+        activar(sig); sig.focus();
+      }
+    });
+  });
+  document.addEventListener('keydown', e => {
+    if (e.altKey && ['1', '2', '3'].includes(e.key)) { e.preventDefault(); activar(tabs[+e.key - 1]); }
+  });
+  try { const g = localStorage.getItem('cripto-tab'); if (g && $(g)) activar($(g)); } catch (e) { /* sin almacenamiento */ }
+
+  // Botones "Copiar"
+  function copiar(texto, boton) {
+    const listo = () => { const o = boton.textContent; boton.textContent = 'Copiado'; setTimeout(() => boton.textContent = o, 1000); };
+    const alterno = () => {
+      const t = document.createElement('textarea'); t.value = texto; document.body.appendChild(t);
+      t.select(); try { document.execCommand('copy'); listo(); } catch (e) { /* nada */ } t.remove();
+    };
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(texto).then(listo, alterno);
+    else alterno();
+  }
+  document.querySelectorAll('[data-copiar]').forEach(b =>
+    b.addEventListener('click', () => copiar($(b.dataset.copiar).value, b)));
+
+  // ---------------------------- Matrices ----------------------------
+  const ENTERO = /^-?\d+$/;
+  const kInput = $('k'), nInput = $('n');
+  const matrices = {};
+  let ultimoResultado = null;
+  let textoResultado = '';
+
+  function getK() { return Math.min(10, Math.max(1, parseInt(kInput.value, 10) || 1)); }
+  function getN() {
+    const v = nInput.value.trim();
+    if (!/^\d+$/.test(v) || BigInt(v) < 2n) return null;
+    return BigInt(v);
+  }
+
+  function crearMatriz(tarjeta, nombre) {
+    tarjeta.innerHTML = `
+      <div class="cabecera">
+        <h2>Matriz ${nombre}</h2>
+        <div class="fila">
+          <button class="btn chico" type="button" data-accion="identidad">Identidad</button>
+          <button class="btn chico" type="button" data-accion="limpiar">Limpiar</button>
+        </div>
+      </div>
+      <label for="rapida-${nombre}">Entrada rapida</label>
+      <div class="con-boton">
+        <input id="rapida-${nombre}" autocomplete="off" placeholder="1 2 3; 4 5 6; 7 8 9">
+        <button class="btn" type="button" data-accion="cargar">Cargar</button>
+      </div>
+      <div class="celdas"></div>`;
+    const m = { nombre, tarjeta, rejilla: tarjeta.querySelector('.celdas'), rapida: tarjeta.querySelector('input'), celdas: [] };
+    tarjeta.querySelector('[data-accion="identidad"]').onclick = () => identidad(m);
+    tarjeta.querySelector('[data-accion="limpiar"]').onclick = () => limpiar(m);
+    tarjeta.querySelector('[data-accion="cargar"]').onclick = () => cargarTexto(m, m.rapida.value);
+    m.rapida.addEventListener('keydown', e => { if (e.key === 'Enter') cargarTexto(m, m.rapida.value); });
+    matrices[nombre] = m;
+    return m;
+  }
+
+  function redimensionar(m, k) {
+    const viejas = m.celdas;
+    m.celdas = [];
+    m.rejilla.innerHTML = '';
+    m.rejilla.style.gridTemplateColumns = `repeat(${k}, minmax(0, 1fr))`;
+    for (let i = 0; i < k; i++) {
+      m.celdas.push([]);
+      for (let j = 0; j < k; j++) {
+        const c = document.createElement('input');
+        c.inputMode = 'numeric';
+        c.autocomplete = 'off';
+        c.setAttribute('aria-label', `${m.nombre}[${i + 1}][${j + 1}]`);
+        if (viejas[i] && viejas[i][j]) c.value = viejas[i][j].value;
+        configurarCelda(m, c, i, j);
+        m.celdas[i].push(c);
+        m.rejilla.appendChild(c);
+      }
+    }
+  }
+
+  function configurarCelda(m, c, i, j) {
+    c.addEventListener('focus', () => c.select());
+    c.addEventListener('input', () => c.classList.remove('error'));
+    c.addEventListener('keydown', e => {
+      const k = m.celdas.length;
+      let fi = i, co = j;
+      const sinSel = c.selectionStart === c.selectionEnd;
+      switch (e.key) {
+        case 'Enter':
+          co++; if (co === k) { co = 0; fi++; }
+          if (fi === k) { // ultima celda de A pasa a B; ultima de B regresa a A
+            const otra = m.nombre === 'A' ? matrices.B : matrices.A;
+            e.preventDefault(); otra.celdas[0][0].focus(); return;
+          }
+          break;
+        case 'ArrowUp': fi = Math.max(0, fi - 1); break;
+        case 'ArrowDown': fi = Math.min(k - 1, fi + 1); break;
+        case 'ArrowLeft': if (sinSel && c.selectionStart > 0) return; co = Math.max(0, co - 1); break;
+        case 'ArrowRight': if (sinSel && c.selectionEnd < c.value.length) return; co = Math.min(k - 1, co + 1); break;
+        default: return;
+      }
+      e.preventDefault();
+      m.celdas[fi][co].focus();
+    });
+    // Pegar varios valores en una celda: se reparten por la matriz
+    c.addEventListener('paste', e => {
+      const texto = (e.clipboardData || window.clipboardData).getData('text');
+      const partes = texto.trim().split(/[\s,;]+/).filter(Boolean);
+      if (partes.length <= 1) return;
+      e.preventDefault();
+      const raiz = Math.round(Math.sqrt(partes.length));
+      if (i === 0 && j === 0 && raiz * raiz === partes.length && raiz <= 10) { cargarTexto(m, texto); return; }
+      const k = m.celdas.length;
+      let pos = i * k + j;
+      for (const p of partes) {
+        if (pos >= k * k) break;
+        m.celdas[Math.floor(pos / k)][pos % k].value = p;
+        pos++;
+      }
+    });
+  }
+
+  function cambiarK(k) {
+    k = Math.min(10, Math.max(1, k));
+    kInput.value = k;
+    redimensionar(matrices.A, k);
+    redimensionar(matrices.B, k);
+  }
+
+  function aviso(msg) { $('aviso-mat').textContent = msg || ''; }
+
+  function cargarTexto(m, texto) {
+    const partes = texto.trim().split(/[\s,;]+/).filter(Boolean);
+    if (!partes.length) return;
+    const k = Math.round(Math.sqrt(partes.length));
+    if (k * k !== partes.length || k > 10) { aviso(`Se capturaron ${partes.length} valores; deben ser k*k (4, 9, 16, ...).`); return; }
+    const malo = partes.find(p => !ENTERO.test(p));
+    if (malo) { aviso(`Valor no valido: ${malo}`); return; }
+    aviso('');
+    if (k !== m.celdas.length) cambiarK(k);
+    partes.forEach((p, t) => { m.celdas[Math.floor(t / k)][t % k].value = p; m.celdas[Math.floor(t / k)][t % k].classList.remove('error'); });
+    m.rapida.value = '';
+    m.celdas[0][0].focus();
+  }
+
+  function leer(m) {
+    let ok = true;
+    const r = m.celdas.map(fila => fila.map(c => {
+      const s = c.value.trim() || '0';
+      if (!ENTERO.test(s)) { c.classList.add('error'); ok = false; return 0n; }
+      c.classList.remove('error');
+      return BigInt(s);
+    }));
+    return ok ? r : null;
+  }
+
+  function escribir(m, mat) {
+    if (mat.length !== m.celdas.length) cambiarK(mat.length);
+    mat.forEach((fila, i) => fila.forEach((v, j) => { m.celdas[i][j].value = v.toString(); m.celdas[i][j].classList.remove('error'); }));
+  }
+
+  function identidad(m) { m.celdas.forEach((f, i) => f.forEach((c, j) => { c.value = i === j ? '1' : '0'; c.classList.remove('error'); })); }
+  function limpiar(m) { m.celdas.flat().forEach(c => { c.value = ''; c.classList.remove('error'); }); m.rapida.value = ''; m.celdas[0][0].focus(); }
+
+  // Formato de salida (HTML y texto plano)
+  function htmlMatriz(mat) {
+    return `<div class="mat" style="grid-template-columns:repeat(${mat.length}, auto)">${mat.flat().map(v => `<span>${v}</span>`).join('')}</div>`;
+  }
+  function textoMatriz(mat) {
+    const ancho = Math.max(...mat.flat().map(v => v.toString().length));
+    return mat.map(f => '| ' + f.map(v => v.toString().padStart(ancho)).join('  ') + ' |').join('\n');
+  }
+  function mostrar(bloques) {
+    // bloques: [{titulo, matriz}] | [{linea}] | [{estado, ok}]
+    let html = '', texto = [];
+    for (const b of bloques) {
+      if (b.matriz) {
+        html += `<div class="bloque"><div class="titulo">${b.titulo}</div>${htmlMatriz(b.matriz)}</div>`;
+        texto.push(b.titulo, textoMatriz(b.matriz), '');
+      } else if (b.estado) {
+        html += `<span class="etiqueta-estado ${b.ok ? 'si' : 'no'}">${b.estado}</span>`;
+        texto.push(b.estado);
+      } else {
+        html += `<p class="linea">${b.linea}</p>`;
+        texto.push(b.linea);
+      }
+    }
+    $('resultado-mat').innerHTML = html;
+    textoResultado = texto.join('\n').trim();
+  }
+
+  function leerAmbas() {
+    const a = leer(matrices.A), b = leer(matrices.B);
+    if (!a || !b) { aviso('Hay celdas con valores no enteros (marcadas en rojo).'); return null; }
+    return [a, b];
+  }
+
+  function determinante(nombre, extra) {
+    const m = leer(matrices[nombre]);
+    const n = getN();
+    if (!m) { aviso('Hay celdas con valores no enteros (marcadas en rojo).'); return; }
+    if (!n) { aviso('El modulo n debe ser un entero mayor o igual a 2.'); return; }
+    const det = C.determinante(m);
+    const detMod = C.mod(det, n);
+    const g = C.mcd(detMod, n);
+    const bloques = [
+      { titulo: `${nombre} =`, matriz: m },
+      { linea: `det(${nombre}) = ${det}` },
+      { linea: `det(${nombre}) mod ${n} = ${detMod}` },
+      { linea: `gcd(${detMod}, ${n}) = ${g}` }
+    ];
+    if (g === 1n) {
+      const inv = C.inversoMultiplicativo(detMod, n);
+      bloques.push({ linea: `det^-1 mod ${n} = ${inv}   (comprobacion: ${detMod} * ${inv} mod ${n} = ${C.mod(detMod * inv, n)})` });
+      bloques.push({ estado: `gcd = 1: ${nombre} SI tiene inversa mod ${n}`, ok: true });
+    } else {
+      bloques.push({ estado: `gcd != 1: ${nombre} NO tiene inversa mod ${n}`, ok: false });
+    }
+    if (extra) bloques.push({ linea: extra });
+    mostrar(bloques);
+  }
+
+  function inversa(nombre) {
+    const m = leer(matrices[nombre]);
+    const n = getN();
+    if (!m) { aviso('Hay celdas con valores no enteros (marcadas en rojo).'); return; }
+    if (!n) { aviso('El modulo n debe ser un entero mayor o igual a 2.'); return; }
+    const inv = C.inversaModular(m, n);
+    if (!inv) { determinante(nombre, 'No se puede calcular la inversa.'); return; }
+    ultimoResultado = inv;
+    mostrar([
+      { titulo: `${nombre}^-1 mod ${n} =`, matriz: inv },
+      { titulo: `Comprobacion: ${nombre} x ${nombre}^-1 mod ${n} =`, matriz: C.moduloMatriz(C.producto(m, inv), n) }
+    ]);
+  }
+
+  const operaciones = {
+    prod() {
+      const ab = leerAmbas(); if (!ab) return;
+      ultimoResultado = C.producto(ab[0], ab[1]);
+      mostrar([{ titulo: 'A x B =', matriz: ultimoResultado }]);
+    },
+    prodmod() {
+      const ab = leerAmbas(); if (!ab) return;
+      const n = getN(); if (!n) { aviso('El modulo n debe ser un entero mayor o igual a 2.'); return; }
+      const p = C.producto(ab[0], ab[1]);
+      ultimoResultado = C.moduloMatriz(p, n);
+      mostrar([{ titulo: 'A x B =', matriz: p }, { titulo: `A x B mod ${n} =`, matriz: ultimoResultado }]);
+    },
+    detA: () => determinante('A'),
+    detB: () => determinante('B'),
+    invA: () => inversa('A'),
+    invB: () => inversa('B'),
+    resA() {
+      if (!ultimoResultado) { aviso('Aun no hay un resultado de matriz.'); return; }
+      escribir(matrices.A, ultimoResultado);
+    },
+    swap() {
+      const ab = leerAmbas(); if (!ab) return;
+      escribir(matrices.A, ab[1]); escribir(matrices.B, ab[0]);
+    }
+  };
+  document.querySelectorAll('[data-op]').forEach(b => b.addEventListener('click', () => { aviso(''); operaciones[b.dataset.op](); }));
+
+  crearMatriz(document.querySelector('[data-matriz="A"]'), 'A');
+  crearMatriz(document.querySelector('[data-matriz="B"]'), 'B');
+  cambiarK(3);
+  $('k-menos').onclick = () => cambiarK(getK() - 1);
+  $('k-mas').onclick = () => cambiarK(getK() + 1);
+  kInput.addEventListener('change', () => cambiarK(getK()));
+  $('copiar-mat').addEventListener('click', e => { if (textoResultado) copiar(textoResultado, e.currentTarget); });
+
+  // ------------------------- Binario / Decimal -------------------------
+  function marcar(input, error) { input.classList.toggle('error', !!error); }
+
+  function decABin() {
+    const s = $('dec-in').value.trim();
+    const bits = Math.max(0, parseInt($('bits').value, 10) || 0);
+    if (!s) { marcar($('dec-in'), false); $('bin-out').value = ''; $('dec-pasos').textContent = ''; return; }
+    if (!C.esDecimal(s)) { marcar($('dec-in'), true); $('bin-out').value = 'Solo digitos 0-9 (entero no negativo)'; $('dec-pasos').textContent = ''; return; }
+    marcar($('dec-in'), false);
+    const b = C.decimalABinario(s, bits);
+    $('bin-out').value = b;
+    let txt = `Agrupado: ${C.agrupar(b)}   (${b.length} bits)\n\n`;
+    if (s.length <= 20) txt += C.pasosDecimalABinario(s).join('\n');
+    $('dec-pasos').textContent = txt;
+  }
+
+  function binADec() {
+    const s = C.limpiarBinario($('bin-in').value);
+    if (!s) { marcar($('bin-in'), false); $('dec-out').value = ''; $('bin-pasos').textContent = ''; return; }
+    if (!C.esBinario(s)) { marcar($('bin-in'), true); $('dec-out').value = 'Solo se permiten 0 y 1'; $('bin-pasos').textContent = ''; return; }
+    marcar($('bin-in'), false);
+    $('dec-out').value = C.binarioADecimal(s);
+    $('bin-pasos').textContent = s.length <= 64 ? C.pasosBinarioADecimal(s) : '(procedimiento omitido: mas de 64 bits)';
+  }
+
+  $('dec-in').addEventListener('input', decABin);
+  $('bits').addEventListener('input', decABin);
+  $('bin-in').addEventListener('input', binADec);
+
+  // -------------------------------- XOR --------------------------------
+  function calcularXor() {
+    const a = C.limpiarBinario($('xor-a').value), b = C.limpiarBinario($('xor-b').value);
+    const okA = !a || C.esBinario(a), okB = !b || C.esBinario(b);
+    marcar($('xor-a'), !okA); marcar($('xor-b'), !okB);
+    if (!okA || !okB) { $('xor-out').value = 'Solo se permiten 0 y 1'; $('xor-detalle').textContent = ''; return; }
+    if (!a || !b) { $('xor-out').value = ''; $('xor-detalle').textContent = ''; return; }
+    const r = C.xor(a, b), L = r.length;
+    const pa = C.rellenar(a, L), pb = C.rellenar(b, L);
+    const gr = C.agrupar(r);
+    $('xor-out').value = r;
+    $('xor-detalle').textContent =
+      `    A = ${C.agrupar(pa)}   (${C.binarioADecimal(pa)})\n` +
+      `    B = ${C.agrupar(pb)}   (${C.binarioADecimal(pb)})\n` +
+      `        ${'-'.repeat(gr.length)}\n` +
+      `A ^ B = ${gr}   (${C.binarioADecimal(r)})`;
+  }
+  $('xor-a').addEventListener('input', calcularXor);
+  $('xor-b').addEventListener('input', calcularXor);
+  $('xor-a').addEventListener('keydown', e => { if (e.key === 'Enter') $('xor-b').focus(); });
+  $('xor-res-a').onclick = () => { $('xor-a').value = $('xor-out').value; $('xor-b').value = ''; calcularXor(); $('xor-b').focus(); };
+  $('xor-swap').onclick = () => { const t = $('xor-a').value; $('xor-a').value = $('xor-b').value; $('xor-b').value = t; calcularXor(); };
+  $('xor-limpiar').onclick = () => { $('xor-a').value = ''; $('xor-b').value = ''; calcularXor(); $('xor-a').focus(); };
+})();
+</script>
+</body>
+</html>
