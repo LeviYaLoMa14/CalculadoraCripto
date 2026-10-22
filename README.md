@@ -16,7 +16,9 @@ java CalculadoraCripto
 
 ## Version web
 
-Abrir `web/index.html` en cualquier navegador (`cripto.js` debe estar en la misma carpeta).
+En linea: https://leviyaloma14.github.io/CalculadoraCripto/
+
+Para usarla sin conexion, abrir `web/index.html` en cualquier navegador (`cripto.js` debe estar en la misma carpeta).
 
 ## Entrada rapida de matrices
 
